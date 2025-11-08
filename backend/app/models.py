@@ -9,6 +9,7 @@ class SkillMatch(BaseModel):
 
 class CVMatchResult(BaseModel):
     filename: str
+    file_id: Optional[str] = None  # Unique ID for file retrieval
     match_percentage: float
     skills_match: float
     experience_match: float

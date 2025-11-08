@@ -67,26 +67,26 @@ export default function ProgressTracker({ progress, files }: ProgressTrackerProp
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-500'
+        return 'bg-gradient-to-r from-green-500 to-green-600'
       case 'error':
-        return 'bg-red-500'
+        return 'bg-gradient-to-r from-red-500 to-red-600'
       case 'analyzing':
-        return 'bg-blue-500'
+        return 'bg-gradient-to-r from-dosiai-primary to-dosiai-secondary'
       default:
-        return 'bg-gray-400'
+        return 'bg-gradient-to-r from-gray-400 to-gray-500'
     }
   }
 
   const getOverallStatusColor = () => {
     switch (overallStatus) {
       case 'completed':
-        return 'bg-green-500'
+        return 'bg-gradient-to-r from-green-500 to-green-600'
       case 'error':
-        return 'bg-red-500'
+        return 'bg-gradient-to-r from-red-500 to-red-600'
       case 'analyzing':
-        return 'bg-blue-500'
+        return 'bg-gradient-to-r from-dosiai-primary to-dosiai-secondary'
       default:
-        return 'bg-primary-500'
+        return 'bg-gradient-to-r from-dosiai-primary to-dosiai-secondary'
     }
   }
 
@@ -109,40 +109,48 @@ export default function ProgressTracker({ progress, files }: ProgressTrackerProp
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-        Processing Progress
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+          Processing Progress
+        </h3>
+        <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+          Powered by Dosiai AI
+        </span>
+      </div>
 
       {/* Overall Progress Bar */}
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-3">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             {overallStatus === 'completed' ? (
-              <CheckCircle2 className="h-6 w-6 text-green-500" />
+              <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-green-500 flex-shrink-0" />
             ) : overallStatus === 'error' ? (
-              <AlertCircle className="h-6 w-6 text-red-500" />
+              <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-red-500 flex-shrink-0" />
             ) : (
-              <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
+              <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 text-dosiai-primary animate-spin flex-shrink-0" />
             )}
-            <div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
                 Overall Progress
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                 {getOverallStatusText()} ({completedCount}/{files.length} files completed)
               </p>
             </div>
           </div>
-          <div className="text-right">
-            <span className="text-lg font-bold text-gray-900 dark:text-white">
+          <div className="text-left sm:text-right flex-shrink-0">
+            <span className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               {overallProgress}%
             </span>
           </div>
         </div>
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 sm:h-4 overflow-hidden">
           <div
-            className={`h-3 rounded-full transition-all duration-500 ${getOverallStatusColor()}`}
-            style={{ width: `${Math.min(100, Math.max(0, overallProgress))}%` }}
+            className={`h-full rounded-full transition-all duration-700 ease-out ${getOverallStatusColor()}`}
+            style={{ 
+              width: `${Math.min(100, Math.max(1, overallProgress))}%`,
+              minWidth: overallProgress > 0 ? '2px' : '0px'
+            }}
           />
         </div>
       </div>
@@ -156,8 +164,8 @@ export default function ProgressTracker({ progress, files }: ProgressTrackerProp
           const fileProgress = progress[file.name] || {
             filename: file.name,
             status: 'processing',
-            progress: 0,
-            current_step: 'Waiting to process...'
+            progress: 1,
+            current_step: 'Queued for processing...'
           }
 
           // Determine if this file is currently being processed
@@ -168,9 +176,9 @@ export default function ProgressTracker({ progress, files }: ProgressTrackerProp
           return (
             <div
               key={index}
-              className={`border rounded-lg p-4 transition-all ${
+              className={`border rounded-lg p-3 sm:p-4 transition-all ${
                 isActive
-                  ? 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 shadow-sm'
+                  ? 'border-dosiai-primary/30 dark:border-dosiai-primary/50 bg-dosiai-light/50 dark:bg-dosiai-primary/10 shadow-sm'
                   : isCompleted
                   ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20'
                   : hasError
@@ -178,48 +186,53 @@ export default function ProgressTracker({ progress, files }: ProgressTrackerProp
                   : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50'
               } hover:shadow-md`}
             >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-3 flex-1 min-w-0">
-                  {getStatusIcon(fileProgress.status)}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-2">
+                <div className="flex items-start sm:items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+                  <div className="flex-shrink-0 mt-0.5 sm:mt-0">
+                    {getStatusIcon(fileProgress.status)}
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <File className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                      <File className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400 flex-shrink-0" />
+                      <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate flex-1 min-w-0">
                         {file.name}
-                        {isActive && (
-                          <span className="ml-2 text-xs text-blue-600 dark:text-blue-400 animate-pulse">
-                            Processing...
-                          </span>
-                        )}
                       </p>
+                      {isActive && (
+                        <span className="text-xs text-dosiai-primary dark:text-dosiai-accent animate-pulse whitespace-nowrap">
+                          Processing...
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 sm:line-clamp-1">
                       {fileProgress.current_step}
                     </p>
                   </div>
                 </div>
-                <div className="ml-4 text-right flex-shrink-0">
-                  <span className={`text-sm font-semibold ${
+                <div className="flex-shrink-0 text-left sm:text-right">
+                  <span className={`text-base sm:text-lg font-bold ${
                     isCompleted
                       ? 'text-green-600 dark:text-green-400'
                       : hasError
                       ? 'text-red-600 dark:text-red-400'
                       : isActive
-                      ? 'text-blue-600 dark:text-blue-400'
+                      ? 'text-dosiai-primary dark:text-dosiai-accent'
                       : 'text-gray-700 dark:text-gray-300'
                   }`}>
                     {Math.round(Math.min(100, Math.max(0, fileProgress.progress)))}%
                   </span>
                 </div>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3 mt-2">
+              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 sm:h-3 mt-2 overflow-hidden">
                 <div
-                  className={`h-3 rounded-full transition-all duration-500 ease-out ${getStatusColor(
+                  className={`h-full rounded-full transition-all duration-700 ease-out ${getStatusColor(
                     fileProgress.status
                   )} ${
                     isActive ? 'animate-pulse' : ''
                   }`}
-                  style={{ width: `${Math.min(100, Math.max(0, fileProgress.progress))}%` }}
+                  style={{ 
+                    width: `${Math.min(100, Math.max(1, fileProgress.progress))}%`,
+                    minWidth: fileProgress.progress > 0 ? '2px' : '0px'
+                  }}
                 />
               </div>
               {isCompleted && (

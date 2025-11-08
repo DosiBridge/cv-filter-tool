@@ -1,11 +1,13 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
-from fastapi.responses import JSONResponse, StreamingResponse
-from typing import List
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
+from typing import List, Dict
 import os
 import uuid
 import aiofiles
 import asyncio
 import json
+import shutil
+from datetime import datetime, timedelta
 from app.services.cv_matcher import CVMatcher
 from app.models import FilterResponse, CVMatchResult, ErrorResponse, ProgressUpdate
 
@@ -13,7 +15,12 @@ router = APIRouter()
 
 # Create upload directory if it doesn't exist
 UPLOAD_DIR = "uploads"
+STORAGE_DIR = "file_storage"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(STORAGE_DIR, exist_ok=True)
+
+# Store file mappings (file_id -> file_path)
+file_storage: Dict[str, Dict[str, any]] = {}
 
 async def process_with_progress(file_paths, requirements, progress_queue):
     """Process CVs and send progress updates via queue"""
@@ -63,9 +70,10 @@ async def upload_and_filter_cvs(
         progress_queue = asyncio.Queue()
         results = None
         error = None
+        file_id_mapping: Dict[str, str] = {}  # filename -> file_id
         
         try:
-            # Save uploaded files temporarily
+            # Save uploaded files and store them for download/preview
             for file in files:
                 file_extension = os.path.splitext(file.filename)[1].lower()
                 if file_extension not in allowed_extensions:
@@ -73,37 +81,100 @@ async def upload_and_filter_cvs(
                     yield f"data: {json.dumps({'type': 'error', 'message': error})}\n\n"
                     return
                 
-                unique_id = str(uuid.uuid4())
-                file_path = os.path.join(UPLOAD_DIR, f"{unique_id}_{file.filename}")
+                # Generate unique IDs
+                upload_id = str(uuid.uuid4())
+                file_id = str(uuid.uuid4())
                 
-                async with aiofiles.open(file_path, 'wb') as f:
+                # Save to upload directory for processing
+                upload_path = os.path.join(UPLOAD_DIR, f"{upload_id}_{file.filename}")
+                
+                async with aiofiles.open(upload_path, 'wb') as f:
                     content = await file.read()
                     await f.write(content)
                 
-                file_paths.append((file_path, file.filename, file_extension))
+                # Copy to storage directory for download/preview
+                storage_path = os.path.join(STORAGE_DIR, f"{file_id}_{file.filename}")
+                shutil.copy2(upload_path, storage_path)
+                
+                # Store file metadata
+                file_storage[file_id] = {
+                    'path': storage_path,
+                    'filename': file.filename,
+                    'uploaded_at': datetime.now(),
+                    'file_id': file_id
+                }
+                
+                file_id_mapping[file.filename] = file_id
+                file_paths.append((upload_path, file.filename, file_extension))
             
             # Start processing in background
             processing_task = asyncio.create_task(
                 process_with_progress(file_paths, requirements, progress_queue)
             )
             
-            # Stream progress updates
+            # Track completed/errored files to ensure we process all files
+            completed_files = set()
+            total_files = len(file_paths)
+            
+            # Send initial progress for all files (1% to show they're queued)
+            for _, filename, _ in file_paths:
+                initial_update = ProgressUpdate(
+                    filename=filename,
+                    status="processing",
+                    progress=1,
+                    current_step=f"Queued for processing: {filename}..."
+                )
+                yield f"data: {json.dumps({'type': 'progress', 'data': initial_update.dict()})}\n\n"
+                await asyncio.sleep(0.05)  # Small delay between initial updates
+            
+            # Stream progress updates until all files are processed
             while True:
                 try:
                     # Get progress update with timeout
                     update = await asyncio.wait_for(progress_queue.get(), timeout=0.1)
                     yield f"data: {json.dumps({'type': 'progress', 'data': update.dict()})}\n\n"
                     
-                    if update.status == "completed" and update.progress >= 100:
+                    # Track completed or errored files
+                    if (update.status == "completed" and update.progress >= 100) or update.status == "error":
+                        completed_files.add(update.filename)
+                    
+                    # Check if all files are completed or errored
+                    if len(completed_files) >= total_files:
+                        # Wait a bit more to get any remaining updates
+                        await asyncio.sleep(0.3)
+                        # Try to get any remaining updates
+                        try:
+                            while True:
+                                update = await asyncio.wait_for(progress_queue.get(), timeout=0.05)
+                                yield f"data: {json.dumps({'type': 'progress', 'data': update.dict()})}\n\n"
+                                if (update.status == "completed" and update.progress >= 100) or update.status == "error":
+                                    completed_files.add(update.filename)
+                        except asyncio.TimeoutError:
+                            pass
                         break
                 except asyncio.TimeoutError:
-                    # Check if processing is done
+                    # Check if processing task is done
                     if processing_task.done():
+                        # Get any remaining updates
+                        await asyncio.sleep(0.2)
+                        try:
+                            while True:
+                                update = await asyncio.wait_for(progress_queue.get(), timeout=0.05)
+                                yield f"data: {json.dumps({'type': 'progress', 'data': update.dict()})}\n\n"
+                                if (update.status == "completed" and update.progress >= 100) or update.status == "error":
+                                    completed_files.add(update.filename)
+                        except asyncio.TimeoutError:
+                            pass
                         break
                     continue
             
             # Get final results
             results = await processing_task
+            
+            # Add file_id to each result
+            for result in results:
+                if result.filename in file_id_mapping:
+                    result.file_id = file_id_mapping[result.filename]
             
             # Send final results
             response_data = {
@@ -119,7 +190,7 @@ async def upload_and_filter_cvs(
             error = str(e)
             yield f"data: {json.dumps({'type': 'error', 'message': error})}\n\n"
         finally:
-            # Clean up uploaded files
+            # Clean up uploaded files (but keep storage files for download/preview)
             for file_path, _, _ in file_paths:
                 try:
                     if os.path.exists(file_path):
@@ -155,8 +226,10 @@ async def upload_and_filter_cvs_sync(
     allowed_extensions = ['.pdf', '.docx']
     file_paths = []
     
+    file_id_mapping: Dict[str, str] = {}
+    
     try:
-        # Save uploaded files temporarily
+        # Save uploaded files and store them for download/preview
         for file in files:
             file_extension = os.path.splitext(file.filename)[1].lower()
             if file_extension not in allowed_extensions:
@@ -165,20 +238,41 @@ async def upload_and_filter_cvs_sync(
                     detail=f"Unsupported file type: {file_extension}. Allowed types: {', '.join(allowed_extensions)}"
                 )
             
-            unique_id = str(uuid.uuid4())
-            file_path = os.path.join(UPLOAD_DIR, f"{unique_id}_{file.filename}")
+            upload_id = str(uuid.uuid4())
+            file_id = str(uuid.uuid4())
             
-            async with aiofiles.open(file_path, 'wb') as f:
+            # Save to upload directory for processing
+            upload_path = os.path.join(UPLOAD_DIR, f"{upload_id}_{file.filename}")
+            
+            async with aiofiles.open(upload_path, 'wb') as f:
                 content = await file.read()
                 await f.write(content)
             
-            file_paths.append((file_path, file.filename, file_extension))
+            # Copy to storage directory for download/preview
+            storage_path = os.path.join(STORAGE_DIR, f"{file_id}_{file.filename}")
+            shutil.copy2(upload_path, storage_path)
+            
+            # Store file metadata
+            file_storage[file_id] = {
+                'path': storage_path,
+                'filename': file.filename,
+                'uploaded_at': datetime.now(),
+                'file_id': file_id
+            }
+            
+            file_id_mapping[file.filename] = file_id
+            file_paths.append((upload_path, file.filename, file_extension))
         
         # Process CVs
         matcher = CVMatcher()
         results = await matcher.process_cv_files(file_paths, requirements)
         
-        # Clean up uploaded files
+        # Add file_id to each result
+        for result in results:
+            if result.filename in file_id_mapping:
+                result.file_id = file_id_mapping[result.filename]
+        
+        # Clean up uploaded files (but keep storage files)
         for file_path, _, _ in file_paths:
             try:
                 if os.path.exists(file_path):
@@ -207,6 +301,60 @@ async def upload_and_filter_cvs_sync(
             except Exception:
                 pass
         raise HTTPException(status_code=500, detail=f"Error processing CVs: {str(e)}")
+
+@router.get("/file/{file_id}")
+async def get_file(file_id: str):
+    """Get file for preview or download"""
+    if file_id not in file_storage:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    file_info = file_storage[file_id]
+    file_path = file_info['path']
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found on disk")
+    
+    return FileResponse(
+        file_path,
+        media_type='application/pdf' if file_path.endswith('.pdf') else 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        filename=file_info['filename']
+    )
+
+@router.get("/file/{file_id}/preview")
+async def preview_file(file_id: str):
+    """Preview file (same as get_file but with inline disposition)"""
+    if file_id not in file_storage:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    file_info = file_storage[file_id]
+    file_path = file_info['path']
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found on disk")
+    
+    return FileResponse(
+        file_path,
+        media_type='application/pdf' if file_path.endswith('.pdf') else 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        filename=file_info['filename'],
+        headers={"Content-Disposition": f"inline; filename={file_info['filename']}"}
+    )
+
+@router.delete("/file/{file_id}")
+async def delete_file(file_id: str):
+    """Delete stored file"""
+    if file_id not in file_storage:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    file_info = file_storage[file_id]
+    file_path = file_info['path']
+    
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        del file_storage[file_id]
+        return {"message": "File deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
 
 @router.get("/health")
 async def health_check():

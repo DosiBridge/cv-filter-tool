@@ -13,6 +13,7 @@ venv.bak/
 dist/
 build/
 uploads/
+file_storage/
 .env
 .DS_Store
 *.log

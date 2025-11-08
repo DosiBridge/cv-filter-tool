@@ -35,11 +35,13 @@ class CVMatcher:
         
         for index, (file_path, filename, extension) in enumerate(file_paths):
             try:
-                # Progress: Starting file processing (0% for this file)
+                # Progress: Starting file processing (1% for this file to show it's started)
                 if progress_callback:
-                    progress_callback(filename, "processing", 0, f"Starting processing {filename}...")
+                    progress_callback(filename, "processing", 1, f"Starting processing {filename}...")
                 
-                # Extract text from CV (0-20% of this file's progress)
+                await asyncio.sleep(0.1)  # Small delay for UI update
+                
+                # Extract text from CV (1-25% of this file's progress)
                 if progress_callback:
                     progress_callback(filename, "processing", 5, f"Uploading {filename}...")
                 
@@ -51,7 +53,9 @@ class CVMatcher:
                 cv_text = await self.file_processor.extract_text(file_path, extension)
                 
                 if progress_callback:
-                    progress_callback(filename, "processing", 20, f"Text extracted from {filename}")
+                    progress_callback(filename, "processing", 25, f"Text extracted from {filename}")
+                
+                await asyncio.sleep(0.1)  # Small delay for UI update
                 
                 if not cv_text or len(cv_text.strip()) < 50:
                     # If text extraction failed or too short, create a low-score result
@@ -77,20 +81,27 @@ class CVMatcher:
                     ))
                     continue
                 
-                # Progress: Analyzing with LLM (20-90% of this file's progress)
+                # Progress: Analyzing with LLM (25-95% of this file's progress)
                 if progress_callback:
                     progress_callback(filename, "analyzing", 30, f"Preparing AI analysis for {filename}...")
                 
                 await asyncio.sleep(0.1)  # Small delay for UI update
                 
                 if progress_callback:
-                    progress_callback(filename, "analyzing", 40, f"Analyzing {filename} with AI (this may take a moment)...")
+                    progress_callback(filename, "analyzing", 40, f"Sending {filename} to AI for analysis...")
                 
-                # Analyze with LLM
+                await asyncio.sleep(0.1)
+                
+                if progress_callback:
+                    progress_callback(filename, "analyzing", 50, f"AI is analyzing {filename} (this may take a moment)...")
+                
+                # Analyze with LLM - this is the longest operation
                 analysis = await self.llm_service.analyze_cv_match(cv_text, requirements)
                 
                 if progress_callback:
-                    progress_callback(filename, "analyzing", 80, f"Processing analysis results for {filename}...")
+                    progress_callback(filename, "analyzing", 85, f"Processing analysis results for {filename}...")
+                
+                await asyncio.sleep(0.1)  # Small delay for UI update
                 
                 # Convert skill_breakdown to SkillMatch objects
                 skill_breakdown = []
@@ -104,11 +115,14 @@ class CVMatcher:
                         ))
                 
                 if progress_callback:
-                    progress_callback(filename, "analyzing", 90, f"Finalizing results for {filename}...")
+                    progress_callback(filename, "analyzing", 95, f"Finalizing results for {filename}...")
+                
+                await asyncio.sleep(0.1)  # Small delay for UI update
                 
                 # Create result object with all new fields
                 result = CVMatchResult(
                     filename=filename,
+                    file_id=None,  # Will be set by the route handler
                     match_percentage=analysis.get("match_percentage", 0),
                     skills_match=analysis.get("skills_match", 0),
                     experience_match=analysis.get("experience_match", 0),

@@ -71,10 +71,10 @@ export default function CVUpload({
       <div
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
-        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+        className={`border-2 border-dashed rounded-lg p-6 sm:p-8 text-center transition-colors ${
           disabled
             ? 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 cursor-not-allowed'
-            : 'border-gray-300 dark:border-gray-600 hover:border-primary-500 dark:hover:border-primary-400 bg-gray-50 dark:bg-gray-900/50 cursor-pointer'
+            : 'border-gray-300 dark:border-gray-600 hover:border-dosiai-primary dark:hover:border-dosiai-accent bg-gray-50 dark:bg-gray-900/50 cursor-pointer'
         }`}
       >
       <input
@@ -90,11 +90,11 @@ export default function CVUpload({
           htmlFor="file-upload"
           className={`cursor-pointer ${disabled ? 'cursor-not-allowed' : ''}`}
         >
-          <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <Upload className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400 dark:text-gray-500 mb-3 sm:mb-4" />
+          <p className="text-base sm:text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
             Drag and drop CV files here, or click to select
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
             Supported formats: PDF, DOCX
           </p>
         </label>
@@ -111,7 +111,7 @@ export default function CVUpload({
               className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
             >
               <div className="flex items-center space-x-3 flex-1 min-w-0">
-                <FileText className="h-5 w-5 text-primary-600 dark:text-primary-400 flex-shrink-0" />
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-dosiai-primary dark:text-dosiai-accent flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                     {file.name}

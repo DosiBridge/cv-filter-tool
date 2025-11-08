@@ -7,6 +7,7 @@ export interface SkillMatch {
 
 export interface CVMatchResult {
   filename: string
+  file_id?: string | null
   match_percentage: number
   skills_match: number
   experience_match: number

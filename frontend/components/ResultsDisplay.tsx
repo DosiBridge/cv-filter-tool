@@ -20,7 +20,11 @@ import {
   Filter,
   X,
   ArrowUpDown,
+  Eye,
+  Download,
+  File,
 } from 'lucide-react'
+import PDFPreview from './PDFPreview'
 
 interface ResultsDisplayProps {
   results: CVMatchResult[]
@@ -38,6 +42,7 @@ export default function ResultsDisplay({
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [skillFilter, setSkillFilter] = useState<string>('')
   const [minMatchFilter, setMinMatchFilter] = useState<number>(0)
+  const [previewFileId, setPreviewFileId] = useState<string | null>(null)
 
   const getMatchColor = (percentage: number) => {
     if (percentage >= 80) return 'text-green-600 dark:text-green-400'
@@ -155,8 +160,36 @@ export default function ResultsDisplay({
     onResultsChange(newResults)
   }
 
+  const handlePreview = (fileId: string, filename: string) => {
+    if (!fileId) return
+    setPreviewFileId(fileId)
+  }
+
+  const handleDownload = (fileId: string, filename: string) => {
+    if (!fileId) return
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    const downloadUrl = `${apiUrl}/api/file/${fileId}`
+    
+    // Create a temporary anchor element to trigger download
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   return (
     <div>
+      {/* PDF Preview Modal */}
+      {previewFileId && (
+        <PDFPreview
+          fileId={previewFileId}
+          filename={sortedResults.find(r => r.file_id === previewFileId)?.filename || 'File'}
+          onClose={() => setPreviewFileId(null)}
+        />
+      )}
+
       <div className="mb-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -165,7 +198,7 @@ export default function ResultsDisplay({
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <Filter className="inline h-4 w-4 mr-1" />
@@ -184,7 +217,7 @@ export default function ResultsDisplay({
                     | 'soft'
                 )
               }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-dosiai-primary focus:border-dosiai-primary"
             >
               <option value="match">Overall Match %</option>
               <option value="skills">Skills Match</option>
@@ -203,7 +236,7 @@ export default function ResultsDisplay({
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-dosiai-primary focus:border-dosiai-primary"
             >
               <option value="desc">Descending (High to Low)</option>
               <option value="asc">Ascending (Low to High)</option>
@@ -219,7 +252,7 @@ export default function ResultsDisplay({
               value={skillFilter}
               onChange={(e) => setSkillFilter(e.target.value)}
               placeholder="Search skills..."
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-dosiai-primary focus:border-dosiai-primary"
             />
           </div>
 
@@ -233,7 +266,7 @@ export default function ResultsDisplay({
               onChange={(e) => setMinMatchFilter(Number(e.target.value))}
               min="0"
               max="100"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-dosiai-primary focus:border-dosiai-primary"
             />
           </div>
         </div>
@@ -249,13 +282,13 @@ export default function ResultsDisplay({
           return (
             <div
               key={result.filename}
-              className="border rounded-lg p-6 transition-all border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 hover:shadow-md"
+              className="border rounded-lg p-4 sm:p-6 transition-all border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 hover:shadow-md"
             >
               {/* Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate flex-1 min-w-0">
                       {result.filename}
                     </h3>
                     {result.match_percentage >= 80 && (
@@ -283,7 +316,7 @@ export default function ResultsDisplay({
                   </div>
 
                   {/* Granular Scores Grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mt-4">
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
                       <div className="flex items-center space-x-2 mb-1">
                         <Code className="h-4 w-4 text-blue-500" />
@@ -359,7 +392,28 @@ export default function ResultsDisplay({
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2 ml-4">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-2 sm:ml-4">
+                  {/* Preview and Download Buttons */}
+                  {result.file_id && (
+                    <div className="flex items-center space-x-1 border-r border-gray-300 dark:border-gray-600 pr-2 mr-2">
+                      <button
+                        onClick={() => handlePreview(result.file_id!, result.filename)}
+                        className="p-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        title="Preview PDF/DOCX"
+                      >
+                        <Eye className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDownload(result.file_id!, result.filename)}
+                        className="p-2 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                        title="Download PDF/DOCX"
+                      >
+                        <Download className="h-5 w-5" />
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Reorder Buttons */}
                   <button
                     onClick={() => moveResult(originalIndex, 'up')}
                     disabled={index === 0}

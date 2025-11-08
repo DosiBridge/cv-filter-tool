@@ -1,10 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { Sparkles } from 'lucide-react'
 import CVUpload from '@/components/CVUpload'
 import RequirementsInput from '@/components/RequirementsInput'
 import ResultsDisplay from '@/components/ResultsDisplay'
 import ProgressTracker from '@/components/ProgressTracker'
+import Header from '@/components/Header'
+import Footer from '@/components/Footer'
 import { CVMatchResult, ProgressUpdate } from '@/types'
 
 export default function Home() {
@@ -126,88 +129,118 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            CV Filter Tool
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300">
-            Upload CVs and filter them against job requirements using AI
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-          <RequirementsInput
-            value={requirements}
-            onChange={setRequirements}
-            disabled={loading}
-          />
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-          <CVUpload
-            files={files}
-            onFilesChange={setFiles}
-            onRemoveFile={handleRemoveFile}
-            disabled={loading}
-          />
-        </div>
-
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
-            <p className="text-red-800 dark:text-red-200">{error}</p>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <Header />
+      
+      <main className="flex-1 py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Hero Section */}
+          <div className="text-center mb-6 sm:mb-8 lg:mb-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-dosiai-primary to-dosiai-secondary rounded-2xl shadow-lg mb-4">
+              <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
+            </div>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3">
+              AI-Powered CV Filter
+            </h1>
+            <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto px-4">
+              Upload multiple CVs and filter them against job requirements using advanced AI technology
+            </p>
+            <p className="text-sm sm:text-base text-dosiai-primary dark:text-dosiai-accent mt-2 font-medium">
+              Powered by Dosiai
+            </p>
           </div>
-        )}
 
-        <div className="flex gap-4 mb-6">
-          <button
-            onClick={handleFilter}
-            disabled={loading || files.length === 0 || !requirements.trim()}
-            className="flex-1 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg"
-          >
-            {loading ? 'Processing...' : 'Filter CVs'}
-          </button>
-          {(files.length > 0 || results.length > 0) && (
-            <button
-              onClick={handleClearAll}
+          {/* Requirements Input */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6">
+            <RequirementsInput
+              value={requirements}
+              onChange={setRequirements}
               disabled={loading}
-              className="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-gray-800 dark:text-gray-200 font-semibold rounded-lg transition-colors duration-200"
-            >
-              Clear All
-            </button>
-          )}
-        </div>
-
-        {showProgress && files.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-            <ProgressTracker progress={progress} files={files} />
-          </div>
-        )}
-
-        {results.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <ResultsDisplay
-              results={results}
-              onResultsChange={setResults}
             />
           </div>
-        )}
 
-        {loading && !showProgress && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-xl">
-              <div className="flex items-center space-x-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Processing CVs...
-                </p>
+          {/* File Upload */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6">
+            <CVUpload
+              files={files}
+              onFilesChange={setFiles}
+              onRemoveFile={handleRemoveFile}
+              disabled={loading}
+            />
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+              <p className="text-sm sm:text-base text-red-800 dark:text-red-200">{error}</p>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <button
+              onClick={handleFilter}
+              disabled={loading || files.length === 0 || !requirements.trim()}
+              className="flex-1 bg-gradient-to-r from-dosiai-primary to-dosiai-secondary hover:from-dosiai-primary/90 hover:to-dosiai-secondary/90 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 sm:px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:transform-none"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing...
+                </span>
+              ) : (
+                'Filter CVs'
+              )}
+            </button>
+            {(files.length > 0 || results.length > 0) && (
+              <button
+                onClick={handleClearAll}
+                disabled={loading}
+                className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-gray-800 dark:text-gray-200 font-semibold rounded-lg transition-colors duration-200"
+              >
+                Clear All
+              </button>
+            )}
+          </div>
+
+          {/* Progress Tracker */}
+          {showProgress && files.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-lg p-4 sm:p-6 mb-4 sm:mb-6">
+              <ProgressTracker progress={progress} files={files} />
+            </div>
+          )}
+
+          {/* Results Display */}
+          {results.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
+              <ResultsDisplay
+                results={results}
+                onResultsChange={setResults}
+              />
+            </div>
+          )}
+
+          {/* Loading Overlay */}
+          {loading && !showProgress && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-6 sm:p-8 shadow-xl max-w-sm w-full">
+                <div className="flex items-center space-x-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dosiai-primary"></div>
+                  <p className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                    Processing CVs...
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-    </main>
+          )}
+        </div>
+      </main>
+
+      <Footer />
+    </div>
   )
 }
 
