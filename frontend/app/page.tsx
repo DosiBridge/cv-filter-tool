@@ -146,7 +146,7 @@ export default function Home() {
               Upload multiple CVs and filter them against job requirements using advanced AI technology
             </p>
             <p className="text-sm sm:text-base text-dosiai-primary dark:text-dosiai-accent mt-2 font-medium">
-              Powered by Dosiai
+              Powered by <a href="https://dosibridge.com" target="_blank" rel="noopener noreferrer" className="hover:underline">dosibridge.com</a>
             </p>
           </div>
 

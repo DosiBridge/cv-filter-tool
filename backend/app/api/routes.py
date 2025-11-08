@@ -116,12 +116,12 @@ async def upload_and_filter_cvs(
             completed_files = set()
             total_files = len(file_paths)
             
-            # Send initial progress for all files (1% to show they're queued)
+            # Send initial progress for all files (0% - queued)
             for _, filename, _ in file_paths:
                 initial_update = ProgressUpdate(
                     filename=filename,
                     status="processing",
-                    progress=1,
+                    progress=0,
                     current_step=f"Queued for processing: {filename}..."
                 )
                 yield f"data: {json.dumps({'type': 'progress', 'data': initial_update.dict()})}\n\n"

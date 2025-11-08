@@ -13,9 +13,14 @@ export default function Header() {
               <Sparkles className="h-6 w-6 text-white" />
             </div>
             <div className="flex flex-col">
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
-                Dosiai
-              </h1>
+              <a 
+                href="https://dosibridge.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xl font-bold text-gray-900 dark:text-white leading-tight hover:text-dosiai-primary transition-colors"
+              >
+                dosibridge
+              </a>
               <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
                 CV Filter Tool
               </p>

@@ -1,6 +1,6 @@
 'use client'
 
-import { Sparkles } from 'lucide-react'
+import { Sparkles, ExternalLink } from 'lucide-react'
 
 export default function Footer() {
   return (
@@ -14,9 +14,15 @@ export default function Footer() {
                 <Sparkles className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                  Dosiai
-                </h3>
+                <a
+                  href="https://dosibridge.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-lg font-bold text-gray-900 dark:text-white hover:text-dosiai-primary transition-colors flex items-center gap-1"
+                >
+                  dosibridge
+                  <ExternalLink className="h-3 w-3" />
+                </a>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   CV Filter Tool
                 </p>
@@ -43,20 +49,21 @@ export default function Footer() {
           {/* Contact */}
           <div>
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
-              Powered by Dosiai
+              Powered by dosibridge
             </h4>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               Advanced AI technology for intelligent CV filtering and candidate matching.
             </p>
             <div className="flex space-x-4">
               <a
-                href="https://dosiai.com"
+                href="https://dosibridge.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-400 hover:text-dosiai-primary transition-colors"
-                aria-label="Dosiai Website"
+                className="text-gray-400 hover:text-dosiai-primary transition-colors flex items-center gap-2"
+                aria-label="dosibridge Website"
               >
                 <Sparkles className="h-5 w-5" />
+                <span className="text-sm">Visit dosibridge.com</span>
               </a>
             </div>
           </div>
@@ -66,7 +73,7 @@ export default function Footer() {
         <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
             <p className="text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">
-              © {new Date().getFullYear()} Dosiai. All rights reserved.
+              © {new Date().getFullYear()} dosibridge.com. All rights reserved.
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-500">
               Built with AI for smarter hiring

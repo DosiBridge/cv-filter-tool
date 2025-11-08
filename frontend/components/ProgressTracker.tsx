@@ -114,7 +114,7 @@ export default function ProgressTracker({ progress, files }: ProgressTrackerProp
           Processing Progress
         </h3>
         <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-          Powered by Dosiai AI
+          Powered by <a href="https://dosibridge.com" target="_blank" rel="noopener noreferrer" className="text-dosiai-primary hover:underline">dosibridge.com</a>
         </span>
       </div>
 
@@ -146,10 +146,11 @@ export default function ProgressTracker({ progress, files }: ProgressTrackerProp
         </div>
         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 sm:h-4 overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-700 ease-out ${getOverallStatusColor()}`}
+            className={`h-full rounded-full transition-all duration-300 ease-linear ${getOverallStatusColor()}`}
             style={{ 
-              width: `${Math.min(100, Math.max(1, overallProgress))}%`,
-              minWidth: overallProgress > 0 ? '2px' : '0px'
+              width: `${Math.min(100, Math.max(0, overallProgress))}%`,
+              minWidth: overallProgress > 0 ? '2px' : '0px',
+              transition: 'width 0.3s linear'
             }}
           />
         </div>
@@ -164,7 +165,7 @@ export default function ProgressTracker({ progress, files }: ProgressTrackerProp
           const fileProgress = progress[file.name] || {
             filename: file.name,
             status: 'processing',
-            progress: 1,
+            progress: 0,
             current_step: 'Queued for processing...'
           }
 
@@ -224,14 +225,15 @@ export default function ProgressTracker({ progress, files }: ProgressTrackerProp
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 sm:h-3 mt-2 overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-700 ease-out ${getStatusColor(
+                  className={`h-full rounded-full transition-all duration-300 ease-linear ${getStatusColor(
                     fileProgress.status
                   )} ${
-                    isActive ? 'animate-pulse' : ''
+                    isActive ? '' : ''
                   }`}
                   style={{ 
-                    width: `${Math.min(100, Math.max(1, fileProgress.progress))}%`,
-                    minWidth: fileProgress.progress > 0 ? '2px' : '0px'
+                    width: `${Math.min(100, Math.max(0, fileProgress.progress))}%`,
+                    minWidth: fileProgress.progress > 0 ? '2px' : '0px',
+                    transition: 'width 0.3s linear'
                   }}
                 />
               </div>
