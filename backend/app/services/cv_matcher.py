@@ -3,6 +3,7 @@ from app.services.file_processor import FileProcessor
 from app.services.llm_service import LLMService
 from app.models import CVMatchResult, SkillMatch
 import os
+import asyncio
 
 class CVMatcher:
     """Service for matching CVs against requirements with progress tracking"""
@@ -34,20 +35,28 @@ class CVMatcher:
         
         for index, (file_path, filename, extension) in enumerate(file_paths):
             try:
-                # Progress: Starting file processing
+                # Progress: Starting file processing (0% for this file)
                 if progress_callback:
-                    progress_callback(filename, "processing", (index / total_files) * 100, f"Processing {filename}...")
+                    progress_callback(filename, "processing", 0, f"Starting processing {filename}...")
                 
-                # Extract text from CV (30% of progress)
+                # Extract text from CV (0-20% of this file's progress)
                 if progress_callback:
-                    progress_callback(filename, "processing", (index / total_files) * 100 + 5, f"Extracting text from {filename}...")
+                    progress_callback(filename, "processing", 5, f"Uploading {filename}...")
+                
+                await asyncio.sleep(0.1)  # Small delay for UI update
+                
+                if progress_callback:
+                    progress_callback(filename, "processing", 10, f"Extracting text from {filename}...")
                 
                 cv_text = await self.file_processor.extract_text(file_path, extension)
+                
+                if progress_callback:
+                    progress_callback(filename, "processing", 20, f"Text extracted from {filename}")
                 
                 if not cv_text or len(cv_text.strip()) < 50:
                     # If text extraction failed or too short, create a low-score result
                     if progress_callback:
-                        progress_callback(filename, "error", (index / total_files) * 100 + 30, "Text extraction failed")
+                        progress_callback(filename, "error", 100, "Text extraction failed - insufficient content")
                     
                     results.append(CVMatchResult(
                         filename=filename,
@@ -68,16 +77,20 @@ class CVMatcher:
                     ))
                     continue
                 
-                # Progress: Analyzing with LLM (30-90% of file progress)
+                # Progress: Analyzing with LLM (20-90% of this file's progress)
                 if progress_callback:
-                    progress_callback(filename, "analyzing", (index / total_files) * 100 + 30, f"Analyzing {filename} with AI...")
+                    progress_callback(filename, "analyzing", 30, f"Preparing AI analysis for {filename}...")
+                
+                await asyncio.sleep(0.1)  # Small delay for UI update
+                
+                if progress_callback:
+                    progress_callback(filename, "analyzing", 40, f"Analyzing {filename} with AI (this may take a moment)...")
                 
                 # Analyze with LLM
                 analysis = await self.llm_service.analyze_cv_match(cv_text, requirements)
                 
-                # Progress: Processing results
                 if progress_callback:
-                    progress_callback(filename, "analyzing", (index / total_files) * 100 + 85, "Processing analysis results...")
+                    progress_callback(filename, "analyzing", 80, f"Processing analysis results for {filename}...")
                 
                 # Convert skill_breakdown to SkillMatch objects
                 skill_breakdown = []
@@ -89,6 +102,9 @@ class CVMatcher:
                             level=skill.get("level", "missing"),
                             relevance=skill.get("relevance", "low")
                         ))
+                
+                if progress_callback:
+                    progress_callback(filename, "analyzing", 90, f"Finalizing results for {filename}...")
                 
                 # Create result object with all new fields
                 result = CVMatchResult(
@@ -115,14 +131,16 @@ class CVMatcher:
                 
                 results.append(result)
                 
-                # Progress: Completed
+                # Progress: Completed (100% for this file)
                 if progress_callback:
-                    progress_callback(filename, "completed", ((index + 1) / total_files) * 100, f"Completed analysis of {filename}")
+                    progress_callback(filename, "completed", 100, f"Successfully completed analysis of {filename}")
+                
+                await asyncio.sleep(0.2)  # Small delay before next file
                 
             except Exception as e:
                 # Handle errors for individual files
                 if progress_callback:
-                    progress_callback(filename, "error", (index / total_files) * 100 + 50, f"Error: {str(e)}")
+                    progress_callback(filename, "error", 100, f"Error processing {filename}: {str(e)}")
                 
                 results.append(CVMatchResult(
                     filename=filename,

@@ -83,14 +83,20 @@ export default function Home() {
               
               if (data.type === 'progress') {
                 const update: ProgressUpdate = data.data
-                setProgress((prev) => ({
-                  ...prev,
-                  [update.filename]: update
-                }))
+                setProgress((prev) => {
+                  const updated = {
+                    ...prev,
+                    [update.filename]: update
+                  }
+                  return updated
+                })
               } else if (data.type === 'results') {
                 setResults(data.data.results || [])
                 setLoading(false)
-                setShowProgress(false)
+                // Keep progress visible for a moment, then hide
+                setTimeout(() => {
+                  setShowProgress(false)
+                }, 2000)
               } else if (data.type === 'error') {
                 throw new Error(data.message || 'An error occurred')
               }

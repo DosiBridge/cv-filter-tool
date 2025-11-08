@@ -19,6 +19,7 @@ import {
   Code,
   Filter,
   X,
+  ArrowUpDown,
 } from 'lucide-react'
 
 interface ResultsDisplayProps {
@@ -33,6 +34,7 @@ export default function ResultsDisplay({
   const [sortBy, setSortBy] = useState<
     'match' | 'skills' | 'experience' | 'education' | 'technical' | 'soft'
   >('match')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [skillFilter, setSkillFilter] = useState<string>('')
   const [minMatchFilter, setMinMatchFilter] = useState<number>(0)
@@ -103,22 +105,31 @@ export default function ResultsDisplay({
       return true
     })
     .sort((a, b) => {
+      let comparison = 0
       switch (sortBy) {
         case 'match':
-          return b.match_percentage - a.match_percentage
+          comparison = a.match_percentage - b.match_percentage
+          break
         case 'skills':
-          return b.skills_match - a.skills_match
+          comparison = a.skills_match - b.skills_match
+          break
         case 'experience':
-          return b.experience_match - a.experience_match
+          comparison = a.experience_match - b.experience_match
+          break
         case 'education':
-          return b.education_match - a.education_match
+          comparison = a.education_match - b.education_match
+          break
         case 'technical':
-          return b.technical_skills_score - a.technical_skills_score
+          comparison = a.technical_skills_score - b.technical_skills_score
+          break
         case 'soft':
-          return b.soft_skills_score - a.soft_skills_score
+          comparison = a.soft_skills_score - b.soft_skills_score
+          break
         default:
-          return 0
+          comparison = 0
       }
+      // Apply sort order (asc or desc)
+      return sortOrder === 'desc' ? -comparison : comparison
     })
 
   const moveResult = (index: number, direction: 'up' | 'down') => {
@@ -154,7 +165,7 @@ export default function ResultsDisplay({
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <Filter className="inline h-4 w-4 mr-1" />
@@ -181,6 +192,21 @@ export default function ResultsDisplay({
               <option value="education">Education</option>
               <option value="technical">Technical Skills</option>
               <option value="soft">Soft Skills</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <ArrowUpDown className="inline h-4 w-4 mr-1" />
+              Order:
+            </label>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="desc">Descending (High to Low)</option>
+              <option value="asc">Ascending (Low to High)</option>
             </select>
           </div>
 
