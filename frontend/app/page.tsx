@@ -4,7 +4,8 @@ import { useState } from 'react'
 import CVUpload from '@/components/CVUpload'
 import RequirementsInput from '@/components/RequirementsInput'
 import ResultsDisplay from '@/components/ResultsDisplay'
-import { CVMatchResult } from '@/types'
+import ProgressTracker from '@/components/ProgressTracker'
+import { CVMatchResult, ProgressUpdate } from '@/types'
 
 export default function Home() {
   const [files, setFiles] = useState<File[]>([])
@@ -12,6 +13,8 @@ export default function Home() {
   const [results, setResults] = useState<CVMatchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [progress, setProgress] = useState<Record<string, ProgressUpdate>>({})
+  const [showProgress, setShowProgress] = useState(false)
 
   const handleFilter = async () => {
     if (files.length === 0) {
@@ -26,6 +29,9 @@ export default function Home() {
 
     setLoading(true)
     setError(null)
+    setShowProgress(true)
+    setProgress({})
+    setResults([])
 
     try {
       const formData = new FormData()
@@ -36,23 +42,69 @@ export default function Home() {
       })
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      
+      // Use SSE endpoint for progress updates
       const response = await fetch(`${apiUrl}/api/upload`, {
         method: 'POST',
         body: formData,
+        credentials: 'include',
+        headers: {
+          // Don't set Content-Type, let browser set it with boundary for FormData
+        },
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Failed to process CVs')
+        throw new Error('Failed to start processing')
       }
 
-      const data = await response.json()
-      setResults(data.results || [])
+      // Handle Server-Sent Events
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error('No response body')
+      }
+
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+              
+              if (data.type === 'progress') {
+                const update: ProgressUpdate = data.data
+                setProgress((prev) => ({
+                  ...prev,
+                  [update.filename]: update
+                }))
+              } else if (data.type === 'results') {
+                setResults(data.data.results || [])
+                setLoading(false)
+                setShowProgress(false)
+              } else if (data.type === 'error') {
+                throw new Error(data.message || 'An error occurred')
+              }
+            } catch (e) {
+              console.error('Error parsing SSE data:', e)
+            }
+          }
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
       setResults([])
-    } finally {
       setLoading(false)
+      setShowProgress(false)
     }
   }
 
@@ -121,6 +173,12 @@ export default function Home() {
           )}
         </div>
 
+        {showProgress && files.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+            <ProgressTracker progress={progress} files={files} />
+          </div>
+        )}
+
         {results.length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
             <ResultsDisplay
@@ -130,7 +188,7 @@ export default function Home() {
           </div>
         )}
 
-        {loading && (
+        {loading && !showProgress && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-xl">
               <div className="flex items-center space-x-4">
