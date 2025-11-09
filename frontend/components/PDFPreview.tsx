@@ -1,6 +1,6 @@
 'use client'
 
-import { X, Download, FileText } from 'lucide-react'
+import { Download, FileText, X } from 'lucide-react'
 
 interface PDFPreviewProps {
   fileId: string
@@ -9,7 +9,7 @@ interface PDFPreviewProps {
 }
 
 export default function PDFPreview({ fileId, filename, onClose }: PDFPreviewProps) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+  const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '')
   const previewUrl = `${apiUrl}/api/file/${fileId}/preview`
   const downloadUrl = `${apiUrl}/api/file/${fileId}`
   const isWordFile = filename.toLowerCase().endsWith('.docx') || filename.toLowerCase().endsWith('.doc')
@@ -65,7 +65,7 @@ export default function PDFPreview({ fileId, filename, onClose }: PDFPreviewProp
                     Word Document Preview
                   </h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Word documents (.docx) cannot be previewed directly in the browser. 
+                    Word documents (.docx) cannot be previewed directly in the browser.
                     Please download the file to view it in Microsoft Word, Google Docs, or another compatible application.
                   </p>
                 </div>

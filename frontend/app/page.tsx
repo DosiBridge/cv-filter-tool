@@ -1,14 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { Sparkles } from 'lucide-react'
 import CVUpload from '@/components/CVUpload'
+import Footer from '@/components/Footer'
+import Header from '@/components/Header'
+import ProgressTracker from '@/components/ProgressTracker'
 import RequirementsInput from '@/components/RequirementsInput'
 import ResultsDisplay from '@/components/ResultsDisplay'
-import ProgressTracker from '@/components/ProgressTracker'
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'
 import { CVMatchResult, ProgressUpdate } from '@/types'
+import { Sparkles } from 'lucide-react'
+import { useState } from 'react'
 
 export default function Home() {
   const [files, setFiles] = useState<File[]>([])
@@ -39,13 +39,13 @@ export default function Home() {
     try {
       const formData = new FormData()
       formData.append('requirements', requirements)
-      
+
       files.forEach((file) => {
         formData.append('files', file)
       })
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '')
+
       // Use SSE endpoint for progress updates
       const response = await fetch(`${apiUrl}/api/upload`, {
         method: 'POST',
@@ -72,7 +72,7 @@ export default function Home() {
 
       while (true) {
         const { done, value } = await reader.read()
-        
+
         if (done) break
 
         buffer += decoder.decode(value, { stream: true })
@@ -83,7 +83,7 @@ export default function Home() {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6))
-              
+
               if (data.type === 'progress') {
                 const update: ProgressUpdate = data.data
                 setProgress((prev) => {
@@ -131,7 +131,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <Header />
-      
+
       <main className="flex-1 py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Hero Section */}

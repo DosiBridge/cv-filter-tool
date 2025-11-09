@@ -1,29 +1,27 @@
 'use client'
 
-import { useState } from 'react'
-import { CVMatchResult, SkillMatch } from '@/types'
+import { CVMatchResult } from '@/types'
 import {
-  CheckCircle2,
-  XCircle,
-  ArrowUp,
   ArrowDown,
-  Star,
-  TrendingUp,
+  ArrowUp,
+  ArrowUpDown,
+  Award,
+  Briefcase,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Award,
-  GraduationCap,
-  Briefcase,
-  Users,
-  MessageSquare,
   Code,
-  Filter,
-  X,
-  ArrowUpDown,
-  Eye,
   Download,
-  File,
+  Eye,
+  Filter,
+  GraduationCap,
+  MessageSquare,
+  Star,
+  TrendingUp,
+  Users,
+  XCircle
 } from 'lucide-react'
+import { useState } from 'react'
 import PDFPreview from './PDFPreview'
 
 interface ResultsDisplayProps {
@@ -153,10 +151,10 @@ export default function ResultsDisplay({
       (r) => r.filename === sortedResults[newIndex].filename
     )
 
-    ;[newResults[originalIndex1], newResults[originalIndex2]] = [
-      newResults[originalIndex2],
-      newResults[originalIndex1],
-    ]
+      ;[newResults[originalIndex1], newResults[originalIndex2]] = [
+        newResults[originalIndex2],
+        newResults[originalIndex1],
+      ]
     onResultsChange(newResults)
   }
 
@@ -167,9 +165,9 @@ export default function ResultsDisplay({
 
   const handleDownload = (fileId: string, filename: string) => {
     if (!fileId) return
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '')
     const downloadUrl = `${apiUrl}/api/file/${fileId}`
-    
+
     // Create a temporary anchor element to trigger download
     const link = document.createElement('a')
     link.href = downloadUrl
@@ -209,12 +207,12 @@ export default function ResultsDisplay({
               onChange={(e) =>
                 setSortBy(
                   e.target.value as
-                    | 'match'
-                    | 'skills'
-                    | 'experience'
-                    | 'education'
-                    | 'technical'
-                    | 'soft'
+                  | 'match'
+                  | 'skills'
+                  | 'experience'
+                  | 'education'
+                  | 'technical'
+                  | 'soft'
                 )
               }
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-dosiai-primary focus:border-dosiai-primary"
@@ -412,7 +410,7 @@ export default function ResultsDisplay({
                       </button>
                     </div>
                   )}
-                  
+
                   {/* Reorder Buttons */}
                   <button
                     onClick={() => moveResult(originalIndex, 'up')}
@@ -481,13 +479,12 @@ export default function ResultsDisplay({
                               <div className="flex-1 mr-2">
                                 <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                                   <div
-                                    className={`h-2 rounded-full ${
-                                      skill.match_percentage >= 70
+                                    className={`h-2 rounded-full ${skill.match_percentage >= 70
                                         ? 'bg-green-500'
                                         : skill.match_percentage >= 40
-                                        ? 'bg-yellow-500'
-                                        : 'bg-red-500'
-                                    }`}
+                                          ? 'bg-yellow-500'
+                                          : 'bg-red-500'
+                                      }`}
                                     style={{
                                       width: `${skill.match_percentage}%`,
                                     }}
