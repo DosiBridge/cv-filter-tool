@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  backend:
+    image: ${DOCKER_USERNAME}/cv-filter-tool-backend:latest
+    container_name: cv-filter-tool-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_storage:/app/file_storage
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - cv-filter-network
+
+  frontend:
+    image: ${DOCKER_USERNAME}/cv-filter-tool-frontend:latest
+    container_name: cv-filter-tool-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - cv-filter-network
+
+volumes:
+  backend_uploads:
+    driver: local
+  backend_storage:
+    driver: local
+
+networks:
+  cv-filter-network:
+    driver: bridge
+
