@@ -13,6 +13,18 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Configure file upload limits (50MB per file, 200MB total)
+from fastapi import Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": exc.body}
+    )
+
 # CORS middleware - Read from environment or use defaults
 cors_origins_str = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001")
 # Parse comma-separated origins or JSON array

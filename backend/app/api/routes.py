@@ -61,9 +61,12 @@ async def upload_and_filter_cvs(
     if not requirements or not requirements.strip():
         raise HTTPException(status_code=400, detail="Requirements cannot be empty")
     
-    # Validate file types
+    # Validate file types and sizes
     allowed_extensions = ['.pdf', '.docx']
+    MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB per file
+    MAX_TOTAL_SIZE = 200 * 1024 * 1024  # 200MB total
     file_paths = []
+    total_size = 0
     
     async def generate():
         """Generate SSE stream with progress updates"""
@@ -74,10 +77,30 @@ async def upload_and_filter_cvs(
         
         try:
             # Save uploaded files and store them for download/preview
+            total_size = 0
             for file in files:
                 file_extension = os.path.splitext(file.filename)[1].lower()
                 if file_extension not in allowed_extensions:
-                    error = f"Unsupported file type: {file_extension}"
+                    error = f"Unsupported file type: {file_extension}. Allowed types: .pdf, .docx"
+                    yield f"data: {json.dumps({'type': 'error', 'message': error})}\n\n"
+                    return
+                
+                # Read file content to check size
+                content = await file.read()
+                file_size = len(content)
+                total_size += file_size
+                
+                # Validate file size (50MB per file, 200MB total)
+                MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+                MAX_TOTAL_SIZE = 200 * 1024 * 1024  # 200MB
+                
+                if file_size > MAX_FILE_SIZE:
+                    error = f"File '{file.filename}' is too large ({file_size / 1024 / 1024:.1f}MB). Maximum size is 50MB per file."
+                    yield f"data: {json.dumps({'type': 'error', 'message': error})}\n\n"
+                    return
+                
+                if total_size > MAX_TOTAL_SIZE:
+                    error = f"Total file size ({total_size / 1024 / 1024:.1f}MB) exceeds limit (200MB). Please upload fewer or smaller files."
                     yield f"data: {json.dumps({'type': 'error', 'message': error})}\n\n"
                     return
                 
@@ -89,7 +112,6 @@ async def upload_and_filter_cvs(
                 upload_path = os.path.join(UPLOAD_DIR, f"{upload_id}_{file.filename}")
                 
                 async with aiofiles.open(upload_path, 'wb') as f:
-                    content = await file.read()
                     await f.write(content)
                 
                 # Copy to storage directory for download/preview

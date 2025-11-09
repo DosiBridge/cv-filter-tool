@@ -46,18 +46,38 @@ export default function Home() {
 
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '')
 
-      // Use SSE endpoint for progress updates
-      const response = await fetch(`${apiUrl}/api/upload`, {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-        headers: {
-          // Don't set Content-Type, let browser set it with boundary for FormData
-        },
-      })
+      // Use SSE endpoint for progress updates with increased timeout for large files
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 600000) // 10 minutes timeout
+
+      let response: Response
+      try {
+        response = await fetch(`${apiUrl}/api/upload`, {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+          signal: controller.signal,
+          headers: {
+            // Don't set Content-Type, let browser set it with boundary for FormData
+          },
+        })
+        clearTimeout(timeoutId)
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId)
+        // Handle QUIC and network errors
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Request timeout - file upload took too long. Please try with smaller files or fewer files.')
+        } else if (fetchError.message?.includes('QUIC') || fetchError.message?.includes('ERR_QUIC')) {
+          throw new Error('Network connection error. Please try again. If the problem persists, try uploading fewer files at once.')
+        } else if (fetchError.message?.includes('Failed to fetch') || fetchError.message?.includes('network')) {
+          throw new Error('Network error - unable to connect to server. Please check your connection and try again.')
+        }
+        throw new Error(`Upload failed: ${fetchError.message || 'Unknown error'}`)
+      }
 
       if (!response.ok) {
-        throw new Error('Failed to start processing')
+        const errorText = await response.text().catch(() => 'Unknown error')
+        throw new Error(`Failed to start processing: ${response.status} ${errorText}`)
       }
 
       // Handle Server-Sent Events
@@ -110,7 +130,19 @@ export default function Home() {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      let errorMessage = 'An error occurred'
+      if (err instanceof Error) {
+        errorMessage = err.message
+        // Provide more helpful messages for common errors
+        if (err.message.includes('QUIC') || err.message.includes('ERR_QUIC')) {
+          errorMessage = 'Network protocol error. This can happen with large file uploads. Please try:\n1. Uploading fewer files at once\n2. Using smaller file sizes\n3. Refreshing the page and trying again'
+        } else if (err.message.includes('timeout')) {
+          errorMessage = 'Upload timeout - the files are too large or processing is taking too long. Please try with smaller files.'
+        } else if (err.message.includes('network') || err.message.includes('Failed to fetch')) {
+          errorMessage = 'Network connection error. Please check your internet connection and try again.'
+        }
+      }
+      setError(errorMessage)
       setResults([])
       setLoading(false)
       setShowProgress(false)
