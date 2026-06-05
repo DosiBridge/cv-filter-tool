@@ -6,8 +6,13 @@ on:
       - main
     paths:
       - 'frontend/**'
+      - 'docker-compose.production.yml'
       - '.github/workflows/frontend-docker.yml'
   workflow_dispatch:
+
+concurrency:
+  group: cv-filter-production-deploy
+  cancel-in-progress: false
 
 jobs:
   docker:
@@ -33,7 +38,62 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/cv-filter-tool-frontend:latest
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:8000' }}
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL || 'https://cvfilterapi.dosibridge.com' }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cv-filter-tool-frontend:buildcache
           cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cv-filter-tool-frontend:buildcache,mode=max
 
+  deploy:
+    name: Deploy CV Filter frontend to DappleSoft VPS
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.event_name != 'pull_request'
+    env:
+      PROD_HOST: ${{ secrets.PROD_HOST }}
+      PROD_USER: ${{ secrets.PROD_USER }}
+      PROD_PORT: ${{ secrets.PROD_PORT || '22' }}
+      COMPOSE_DIR: /home/dapplesoft/apps/docker-compose/cv-filter-tool
+      COMPOSE_PROJECT: cv-filter-tool
+      BACKEND_SERVICE: backend
+      FRONTEND_SERVICE: frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Prepare SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.PROD_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Upload production compose file
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "$PROD_PORT" "$PROD_USER@$PROD_HOST" "mkdir -p '$COMPOSE_DIR'"
+          scp -i ~/.ssh/id_ed25519 -P "$PROD_PORT" docker-compose.production.yml "$PROD_USER@$PROD_HOST:$COMPOSE_DIR/docker-compose.yml"
+
+      - name: Deploy with isolated Docker Compose project
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "$PROD_PORT" "$PROD_USER@$PROD_HOST" \
+            "COMPOSE_DIR='$COMPOSE_DIR' COMPOSE_PROJECT='$COMPOSE_PROJECT' BACKEND_SERVICE='$BACKEND_SERVICE' FRONTEND_SERVICE='$FRONTEND_SERVICE' bash -s" <<'REMOTE_DEPLOY'
+          set -euo pipefail
+          LOCK_FILE="/tmp/cv-filter-tool-deploy.lock"
+          flock "$LOCK_FILE" bash -s <<'LOCKED_DEPLOY'
+          set -euo pipefail
+          cd "$COMPOSE_DIR"
+          echo "Checking sibling DosiBridge root before deploy"
+          curl -fsSI --max-time 15 http://127.0.0.1:8081/ >/dev/null
+          docker compose -p "$COMPOSE_PROJECT" -f docker-compose.yml pull "$BACKEND_SERVICE" "$FRONTEND_SERVICE"
+          docker compose -p "$COMPOSE_PROJECT" -f docker-compose.yml up -d --no-deps "$BACKEND_SERVICE" "$FRONTEND_SERVICE"
+          docker compose -p "$COMPOSE_PROJECT" -f docker-compose.yml ps "$BACKEND_SERVICE" "$FRONTEND_SERVICE"
+          curl -fsS --max-time 20 http://127.0.0.1:8089/health >/dev/null
+          curl -fsSI --max-time 20 http://127.0.0.1:9090/ >/dev/null
+          curl -fsSI --max-time 15 http://127.0.0.1:8081/ >/dev/null
+          echo "CV Filter frontend deploy verified"
+          LOCKED_DEPLOY
+          REMOTE_DEPLOY
+
+      - name: Verify public endpoints
+        run: |
+          curl -fsS --max-time 30 https://cvfilterapi.dosibridge.com/health | grep -q 'healthy'
+          curl -fsSI --max-time 30 https://cvfilter.dosibridge.com/ | head -20
